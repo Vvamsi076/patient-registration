@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reception Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Arial', sans-serif; }
+    #printable {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      background-color: #fbcfe8 !important; /* Tailwind pink-200 */
+    }
+    @media print {
+      body * { visibility: hidden; }
+      #printable, #printable * { visibility: visible; }
+      #printable { position: absolute; left: 0; top: 0; }
+      input { border: none !important; }
+    }
+    input { border: none; outline: none; background: transparent; width: auto; }
+  </style>
+</head>
+<body class="bg-gray-100 p-6">
+
+  <div class="max-w-lg mx-auto bg-white shadow-lg rounded-lg p-6">
+    <h1 class="text-2xl font-bold text-center mb-4">Reception Dashboard</h1>
+
+    <div class="flex space-x-2 mb-4">
+      <input id="searchId" type="text" placeholder="Enter Temporary ID" class="flex-1 border rounded px-3 py-2">
+      <button onclick="searchPatient()" class="bg-blue-600 text-white px-4 py-2 rounded">Search</button>
+    </div>
+
+    <div id="patientInfo" class="hidden">
+      <p><b>Temporary ID:</b> <input id="p-temp" readonly></p>
+      <p><b>Name:</b> <input id="p-name"></p>
+      <p><b>DOB:</b> <input id="p-dob"></p>
+      <p><b>Gender:</b> <input id="p-gender"></p>
+      <p><b>Department:</b> <input id="p-dept"></p>
+      <p><b>Mobile:</b> <input id="p-mobile"></p>
+      <p><b>Doctor:</b> <input id="p-doctor"></p>
+      <p><b>Amount:</b> ₹<input id="p-amt"></p>
+      
+      <button onclick="updatePatient()" class="mt-4 bg-green-600 text-white px-4 py-2 rounded">Submit</button>
+      <button onclick="printSlip()" class="mt-4 ml-2 bg-gray-800 text-white px-4 py-2 rounded">PRINT TOKEN SLIP</button>
+    </div>
+  </div>
+
+  <div id="printable" class="hidden p-4 border-2 border-black text-sm w-[420px] mx-auto rounded">
+
+    <div class="text-center pb-1">
+      <p class="font-bold text-lg">DHC CHEEKATIMANI PALLI - 515571</p>
+    </div>
+
+    <h2 class="text-center font-bold mt-2 pb-1">OUTPATIENT CASH BILL</h2>
+
+    <div class="mt-2">
+      <div class="grid grid-cols-2 gap-2 py-1">
+        <p><b>Name:</b> <input id="bill-name"></p>
+        <p><b>Token No:</b> <input id="bill-token"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 py-1">
+        <p><b>Age/Gender:</b> <input id="bill-age-gender"></p>
+        <p><b>Room No:</b> <input id="bill-room" value="SS B 34"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 py-1">
+        <p><b>Treating Doctor:</b> <input id="bill-doctor"></p>
+        <p><b>Date:</b> <input id="bill-date"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 py-1">
+        <p><b>Department:</b> <input id="bill-dept"></p>
+        <p><b>Total Amount:</b> ₹<input id="bill-amt"></p>
+      </div>
+    </div>
+
+    <div class="mt-2 py-1">
+      <p><b>Particulars</b></p>
+      <p><input id="bill-particular" value="MORNING SPECIAL CONSULTATION - REGULAR"></p>
+    </div>
+
+    <div class="flex justify-between mt-2 text-xs">
+      <p>Prepared by: Reception</p>
+      <p>Printed on: <input id="bill-date2"></p>
+    </div>
+  </div>
+
+<script>
+let tokenCounter = 1;
+
+// THIS IS THE KEY CHANGE
+function searchPatient() {
+  const id = document.getElementById("searchId").value;
+  const patientString = localStorage.getItem(id);
+  
+  if (!patientString) {
+    alert("Patient not found. Please enter a valid temporary ID.");
+    document.getElementById("patientInfo").classList.add("hidden");
+    return;
+  }
+  
+  const patient = JSON.parse(patientString);
+
+  document.getElementById("patientInfo").classList.remove("hidden");
+  document.getElementById("p-temp").value = id;
+  // Use a fallback for title if it doesn't exist to prevent "null" in the name
+  const fullName = [patient.title, patient.firstName, patient.lastName].filter(Boolean).join(" ");
+  document.getElementById("p-name").value = fullName;
+  document.getElementById("p-dob").value = patient.dob;
+  document.getElementById("p-gender").value = patient.gender;
+  document.getElementById("p-dept").value = patient.department;
+  document.getElementById("p-mobile").value = patient.landlineMobile;
+  document.getElementById("p-doctor").value = patient.referralDoctor;
+  document.getElementById("p-amt").value = "500"; // Assuming a default amount
+}
+
+function updatePatient() {
+  const id = document.getElementById("p-temp").value;
+  let patient = JSON.parse(localStorage.getItem(id));
+  
+  if (!patient) {
+    alert("Error: Patient data not found in local storage.");
+    return;
+  }
+
+  // Update the patient object with new values from the form
+  const nameParts = document.getElementById("p-name").value.split(" ");
+  patient.title = nameParts[0];
+  patient.firstName = nameParts[1];
+  patient.lastName = nameParts.slice(2).join(" ");
+  patient.dob = document.getElementById("p-dob").value;
+  patient.gender = document.getElementById("p-gender").value;
+  patient.department = document.getElementById("p-dept").value;
+  patient.landlineMobile = document.getElementById("p-mobile").value;
+  patient.referralDoctor = document.getElementById("p-doctor").value;
+  patient.amount = document.getElementById("p-amt").value;
+
+  localStorage.setItem(id, JSON.stringify(patient));
+  alert("Patient details updated!");
+}
+
+function printSlip() {
+  const now = new Date();
+  const id = document.getElementById("p-temp").value;
+  const patient = JSON.parse(localStorage.getItem(id));
+
+  if (!patient) {
+    alert("Error: No patient data to print.");
+    return;
+  }
+
+  const fullName = [patient.title, patient.firstName, patient.lastName].filter(Boolean).join(" ");
+  const dob = patient.dob;
+  const gender = patient.gender;
+  const department = patient.department;
+  const doctor = patient.referralDoctor;
+  const amount = patient.amount;
+
+  document.getElementById("bill-name").value = fullName;
+  document.getElementById("bill-age-gender").value = calculateAge(dob) + " " + gender;
+  document.getElementById("bill-doctor").value = doctor;
+  document.getElementById("bill-dept").value = department;
+  document.getElementById("bill-amt").value = amount;
+  document.getElementById("bill-token").value = tokenCounter++;
+  document.getElementById("bill-date").value = now.toLocaleDateString();
+  document.getElementById("bill-date2").value = now.toLocaleString();
+
+  document.getElementById("printable").classList.remove("hidden");
+  window.print();
+}
+
+function calculateAge(dob) {
+  if (!dob) return "";
+  const [day, month, year] = dob.split("/").map(Number);
+  const birthDate = new Date(year, month - 1, day);
+  const ageDifMs = Date.now() - birthDate.getTime();
+  const ageDate = new Date(ageDifMs);
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
+}
+</script>
+
+</body>
+</html>
